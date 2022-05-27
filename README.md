@@ -1,5 +1,7 @@
 # BarnsHutTree for C++
 Specific description about BarnesHutTree is in here. <https://www.ifa.hawaii.edu/~barnes/treecode/treeguide.html>
+This link also specify about how to implement NBody, so if you want to know how to implement Nbody by BarnsHutTree, please check the link above.
+
 This program is based on Joshua E. Barnes's Treecode 1.4 who is the founder of Treecode.
 
 Given the coordinates of all particles, the space is recursively divided so that only one particle can fit into the divided subspace. By doing so, you can search for another particle within a radius of r from one particle.
@@ -42,7 +44,7 @@ If you just want to search for another particle within a radius of r from one pa
 
             
             double r_criterion = 1.0;
-            tree.FindNeighborParticleAndAction([&r_criterion](Tree::Cell* c, real psize, real* pmid) 
+            tree.FindNeighborParticleAndAction([&r_criterion,&DIM](Tree::Cell* c, real psize, real* pmid) 
                                                 {
                                                     
                                                     real dx, farLen;
@@ -58,7 +60,7 @@ If you just want to search for another particle within a radius of r from one pa
 
                                                     return false;
                                                 },
-                                                [this](int i, int j)     { std::cout << "body " << j << "is most likely within a radius r from body " << i << "\n";},
+                                                [](int i, int j)     { std::cout << "body " << j << "is most likely within a radius r from body " << i << "\n";},
                                                 
                                                 [](int i, Tree::Cell* p) { std::cout << "All region of Cell p is outside a radius r from body i"     ;}
                                                 )
@@ -81,7 +83,11 @@ If you want to implement NBody code,
     const unsigned int number = 1000; //number of particles
     const unsigned int DIM    = 3;    //dimention of space
     double position[number][DIM];     //position of all particles(x,y,z)
-    double mass[number];
+    double mass[number];              //mass of all particles
+
+    double theta = 0.5;               //criterion to decide waht cell can be assumed as one object by particle. 
+                                      //If theta is small, criterion is strict (which means a little far cell is not going to be assumed as one object, 
+                                      //very far cell is going to be assumed as one). 
 
     using Tree = BarnesHutTree<double(*)[DIM],AdditionalInfo>; 
     //double(*)[DIM] is a type of two-dimensional array
@@ -91,7 +97,7 @@ If you want to implement NBody code,
     {
         while(true)
         {
-            tree.MakeTree([&number,&DIM,&position,&tree](Tree::Cell* p) 
+            tree.MakeTree([&number,&DIM,&position,&tree,&DIM](Tree::Cell* p) 
                                             {
                                                 p->info.mass = 0;
                                                 p->info.rcrit2 = 0;
@@ -99,21 +105,21 @@ If you want to implement NBody code,
                                                     p->info.cmpos[d] = 0;
                                             }, 
                         //Functor to initialize Additional info of Cell p.
-                        [&number,&DIM,&position,&tree](Tree::Cell* p,real psize,Tree::Cell* q)
+                        [&number,&DIM,&position,&tree,&DIM](Tree::Cell* p,real psize,Tree::Cell* q)
                                         {    
                                             p->info.mass += q->info.mass;
                                             for(int d = 0;d<DIM;++d)
                                                 p->info.cmpos[d] += q->position[d]*q->info.mass;
                                         },
                         //Functor to allow Cell p to get information aboue Cell q which is a child of Cell p. psize is length of a side of Cell p.
-                        [&number,&DIM,&position,&tree](Tree::Cell* p, real psize, int id)
+                        [&number,&DIM,&position,&tree,&DIM](Tree::Cell* p, real psize, int id)
                                         {
                                             p->info.mass += mass[id];
                                             for(int d = 0;d<DIM;++d)
                                                 p->info.cmpos[d] += position[id][d]*mass[id];
                                         },
                         //Functor to allow Cell p to get information aboue Body id which is a child of Cell p. psize is length of a side of Cell p.
-                        [&number,&DIM,&position,&tree](Tree::Cell* p,real psize) 
+                        [&number,&DIM,&position,&tree,&DIM](Tree::Cell* p,real psize) 
                                         {
                                             if(p->info.mass > 0)
                                             {
@@ -146,7 +152,7 @@ If you want to implement NBody code,
 
 
                     tree.FindNeighborParticleAndAction(
-                        [this](Tree::Cell* c, real psize, real* pmid)
+                        [&DIM](Tree::Cell* c, real psize, real* pmid)
                         {
                             
                             real dmax, dsq, dk;
@@ -154,7 +160,7 @@ If you want to implement NBody code,
                         
                             dmax = psize;                               /* init maximum distance    */
                             dsq = 0.0;                                  /* and squared min distance */
-                            for (k = 0; k < this->DIM; k++) {                /* loop over space dims     */
+                            for (k = 0; k < DIM; k++) {                /* loop over space dims     */
                                 dk = c->position[k] - pmid[k];               /* form distance to midpnt  */
                                 if (dk < 0)                             /* and get absolute value   */
                                     dk = - dk;
@@ -168,12 +174,12 @@ If you want to implement NBody code,
                                     dmax > ((real) 1.5) * psize);     /* and adjacency criterion  */
                         },
 
-                        [this](int i, int j)
+                        [](int i, int j)
                         {
                             std::cout << "interaction with particle " << i << "and partilce " << j << "\n";
                         },
 
-                        [this](int i, Tree::Cell* p)
+                        [](int i, Tree::Cell* p)
                         {
                             std::cout << "interaction with particle " << i << "and cell " << p << "\n";
                             //you can accese p->info.mass,p->info.rcrit2,p->info.cmpos,p->position
@@ -274,26 +280,27 @@ If you want to implement NBody code, you have to write functor like this below.
 Note that you can acces position of center of Cell p by p->position.
 
 ```c++
-    tree.MakeTree([](Tree::Cell* p) 
+    real theta = 0.5;
+    tree.MakeTree([&theta,&position,&mass,&tree,&DIM](Tree::Cell* p) 
                                     {
                                         p->info.mass = 0;
                                         p->info.rcrit2 = 0;
                                         for(int d = 0;d<DIM;++d)
                                             p->info.cmpos[d] = 0;
                                     }, 
-                  [](Tree::Cell* p,real psize,Tree::Cell* q)
+                  [&theta,&position,&mass,&tree,&DIM](Tree::Cell* p,real psize,Tree::Cell* q)
                                 {    
                                     p->info.mass += q->info.mass;
                                     for(int d = 0;d<DIM;++d)
                                         p->info.cmpos[d] += q->position[d]*q->info.mass;
                                 },
-                  [](Tree::Cell* p, real psize, int id)
+                  [&theta,&position,&mass,&tree,&DIM](Tree::Cell* p, real psize, int id)
                                 {
                                     p->info.mass += mass[id];
                                     for(int d = 0;d<DIM;++d)
                                         p->info.cmpos[d] += position[id][d]*mass[id];
                                 },
-                  [](Tree::Cell* p,real psize) 
+                  [&theta,&position,&mass,&tree,&DIM](Tree::Cell* p,real psize) 
                                 {
                                     if(p->info.mass > 0)
                                     {
@@ -335,7 +342,7 @@ next thing you have to do is this below
                                                 },
                                                 //Functor to check if Cell c pass the criterion. pmid, psize is another cell of position.
                                                 
-                                                [this](int i, int j)     { },
+                                                [](int i, int j)     { },
                                                 
                                                 [](int i, Tree::Cell* p) { }
                                                 )
@@ -345,7 +352,7 @@ If you just want to search for another particle within a radius of r from one pa
 
 ```c++
     double r_criterion = 1.0;
-    tree.FindNeighborParticleAndAction([&r_criterion](Tree::Cell* c, real psize, real* pmid) 
+    tree.FindNeighborParticleAndAction([&r_criterion,&DIM](Tree::Cell* c, real psize, real* pmid) 
                                         {
                                             
                                             real dx, farLen;
@@ -361,9 +368,9 @@ If you just want to search for another particle within a radius of r from one pa
 
                                             return false;
                                         },
-                                        [this](int i, int j)     { std::cout << "body " << j << "is within a radius r from body " << i << "\n";},
+                                        [](int i, int j)     { std::cout << "body " << j << "is within a radius r_criterion from body " << i << "\n";},
                                         
-                                        [](int i, Tree::Cell* p) { std::cout << "All region of Cell p is outside a radius r from body i"     ;}
+                                        [](int i, Tree::Cell* p) { std::cout << "All region of Cell p is outside a radius r_criterion from body i"     ;}
                                         )
 ```
 
@@ -371,7 +378,7 @@ If you want to implement NBody code, you have to write functor like this below.
 
 ```c++
     tree.FindNeighborParticleAndAction(
-                        [this](Tree::Cell* c, real psize, real* pmid)
+                        [&DIM](Tree::Cell* c, real psize, real* pmid)
                         {
                             
                             real dmax, dsq, dk;
@@ -379,7 +386,7 @@ If you want to implement NBody code, you have to write functor like this below.
                         
                             dmax = psize;                               /* init maximum distance    */
                             dsq = 0.0;                                  /* and squared min distance */
-                            for (k = 0; k < this->DIM; k++) {                /* loop over space dims     */
+                            for (k = 0; k < DIM; k++) {                /* loop over space dims     */
                                 dk = c->position[k] - pmid[k];               /* form distance to midpnt  */
                                 if (dk < 0)                             /* and get absolute value   */
                                     dk = - dk;
@@ -393,12 +400,12 @@ If you want to implement NBody code, you have to write functor like this below.
                                     dmax > ((real) 1.5) * psize);     /* and adjacency criterion  */
                         },
 
-                        [this](int i, int j)
+                        [](int i, int j)
                         {
                             std::cout << "interaction with particle " << i << "and partilce " << j << "\n";
                         },
 
-                        [this](int i, Tree::Cell* p)
+                        [](int i, Tree::Cell* p)
                         {
                             std::cout << "interaction with particle " << i << "and cell " << p << "\n";
                             //you can accese p->info.mass,p->info.rcrit2,p->info.cmpos,p->position
