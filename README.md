@@ -1,3 +1,7 @@
+# BarnsHutTree for C++
+Specific description about BarnesHutTree is in here. <https://www.ifa.hawaii.edu/~barnes/treecode/treeguide.html>
+This program is based on Joshua E. Barnes's Treecode 1.4 who is the founder of Treecode.
+
 Given the coordinates of all particles, the space is recursively divided so that only one particle can fit into the divided subspace. By doing so, you can search for another particle within a radius of r from one particle.
 
 You can use this program as a part of NBody-code, sph and collision detection!
