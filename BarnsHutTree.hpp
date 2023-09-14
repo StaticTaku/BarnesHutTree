@@ -1,5 +1,4 @@
 #pragma once
-#include <Settings.hpp>
 #include <functional>
 #include <iostream>
 #include <cmath>
@@ -45,7 +44,7 @@ namespace
     {
         Type type;
         bool update;
-        real* position;
+        double* position;
         Node* next;
     };
 
@@ -75,13 +74,13 @@ public:
         Cell(unsigned char DIM):flag(true)
         {
             subP = new Node*[1<<DIM];
-            position = new real[DIM];
+            position = new double[DIM];
         }
 
         void Construct(unsigned int DIM)
         {
             subP = new Node*[1<<DIM];
-            position = new real[DIM];
+            position = new double[DIM];
             flag = true;
         }
 
@@ -110,17 +109,16 @@ private:
     int actLen;
     Node** active;
     Cell* interact;
-    real length;
+    double length;
     unsigned char DIM;
     std::function<void(int,int)> action;
     std::function<void(int,Cell*)> bc_action;
-    std::function<bool(Cell* c, real psize, real* pmid)> accept;
+    std::function<bool(Cell* c, double psize, double* pmid)> accept;
+    bool firstCall = true;
 
     void NewTree()
     {
-        static bool firstCall = true;
         Node* p;
-
         if(!firstCall)
         {
             p = root;
@@ -171,7 +169,7 @@ private:
     void ExpandBox()
     {
         rsize = 1;
-        real dmax = 0,d;
+        double dmax = 0,d;
         Body* p;
         for(p = bodies;p<bodies + num;++p)
         {
@@ -191,7 +189,7 @@ private:
     {
         Cell* q; Cell* c;
         int qind,k;
-        real qsize, dist2;
+        double qsize, dist2;
 
         q = root;
         qind = SubIndex(p,q);
@@ -229,7 +227,7 @@ private:
         return ind;
     }
 
-    void PropagateInfo(Cell* p, real psize, int lev, std::function<void(Cell*)> initializer, std::function<void(Cell*, real, Cell*)> propagater_cc, std::function<void(Cell*, real, int)> propagater_cb, std::function<void(Cell*, real)> dataProcessor)
+    void PropagateInfo(Cell* p, double psize, int lev, std::function<void(Cell*)> initializer, std::function<void(Cell*, double, Cell*)> propagater_cc, std::function<void(Cell*, double, int)> propagater_cb, std::function<void(Cell*, double)> dataProcessor)
     {
         Node* q;
 
@@ -277,7 +275,7 @@ private:
         }
     }
 
-    void WalkTree(Node** aptr, Node** nptr, Cell* cptr, int* bptr, int i, Node* p, real psize, real* pmid)
+    void WalkTree(Node** aptr, Node** nptr, Cell* cptr, int* bptr, int i, Node* p, double psize, double* pmid)
     {
         Node **np, **ap, *q;
         int actSafe;
@@ -327,9 +325,9 @@ private:
         }
     }
 
-    bool isFarFromTarget(Node* c, real psize, real* pmid)
+    bool isFarFromTarget(Node* c, double psize, double* pmid)
     {
-        real dx, farLen;
+        double dx, farLen;
 
         farLen = psize + length;
 
@@ -343,12 +341,12 @@ private:
         return false;
     }
 
-    void WalkSub(Node** nptr, Node** np, Cell* cptr, int* bptr, int i, Node* p, real psize, real* pmid)
+    void WalkSub(Node** nptr, Node** np, Cell* cptr, int* bptr, int i, Node* p, double psize, double* pmid)
     {
-        real poff;
+        double poff;
         Node* q;
         int k;
-        real nmid[DIM];
+        double nmid[DIM];
 
         poff = psize/4;
         if(p->type == Type::Cell)
@@ -379,7 +377,7 @@ private:
     }
     
 public:
-    real rsize = 1;//root size
+    double rsize = 1;//root size
     int tdepth;//木の高さ
 
     int num;//現在のAタイプ粒子数
@@ -447,7 +445,7 @@ public:
      * @param propagater_cb the function for when body is a child of cell, cell gets info from body and update additional cell info
      * @param dataProcessor the function for when info propagation is over, adjust data of cell
      */
-    void MakeTree(std::function<void(Cell*)> initializer, std::function<void(Cell*, real, Cell*)> propagater_cc, std::function<void(Cell*, real, int)> propagater_cb, std::function<void(Cell*, real)> dataProcessor)
+    void MakeTree(std::function<void(Cell*)> initializer, std::function<void(Cell*, double, Cell*)> propagater_cc, std::function<void(Cell*, double, int)> propagater_cb, std::function<void(Cell*, double)> dataProcessor)
     {
         Body* p;
 
@@ -464,7 +462,7 @@ public:
         
     }
 
-    void MakeTree(int number, int number2,std::function<void(Cell*)> initializer, std::function<void(Cell*, real, Cell*)> propagater_cc, std::function<void(Cell*, real, int)> propagater_cb, std::function<void(Cell*, real)> dataProcessor)
+    void MakeTree(int number, int number2,std::function<void(Cell*)> initializer, std::function<void(Cell*, double, Cell*)> propagater_cc, std::function<void(Cell*, double, int)> propagater_cb, std::function<void(Cell*, double)> dataProcessor)
     {
         Body* p;
 
@@ -494,9 +492,9 @@ public:
      * @param _action 
      * @param BC_action 
      */
-    void FindNeighborParticleAndAction(std::function<bool(Cell* c, real psize, real* pmid)> _accept, std::function<void(int,int)> _action, std::function<void(int,Cell*)> BC_action)
+    void FindNeighborParticleAndAction(std::function<bool(Cell* c, double psize, double* pmid)> _accept, std::function<void(int,int)> _action, std::function<void(int,Cell*)> BC_action)
     {
-        real rmid[DIM];
+        double rmid[DIM];
         actLen = 20*216*tdepth;
         accept = _accept;
         action = _action; //BB_action
